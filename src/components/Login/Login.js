@@ -1,9 +1,15 @@
 import { useContext, useState } from "react";
-import './loginManager'
+import "./loginManager";
 import { UserContext } from "../../App";
 import { useHistory, useLocation } from "react-router";
-import { initializeLoginFramework, handleGoogleSignIn, handleSignOut, handleFbSignIn } from "./loginManager";
-
+import {
+  initializeLoginFramework,
+  handleGoogleSignIn,
+  handleSignOut,
+  handleFbSignIn,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "./loginManager";
 
 function Login() {
   const [newUser, setNewUser] = useState(false);
@@ -17,37 +23,39 @@ function Login() {
     success: false,
   });
 
-  initializeLoginFramework();  
-  
+  initializeLoginFramework();
+
   const [loggedInUser, setLoggedInUser] = useContext(UserContext);
   const history = useHistory();
   const location = useLocation();
-  let { from } = location.state || { from: { pathname: "/" }};
+  let { from } = location.state || { from: { pathname: "/" } };
+
+  const handleRespons = (res, redirect) => {
+    setUser(res);
+    setLoggedInUser(res);
+    if (redirect) {
+      history.replace(from);
+    }
+  };
 
   const googleSignIn = () => {
-    handleGoogleSignIn().then(res => {
-      setUser(res);
-      setLoggedInUser(res);
-      history.replace(from);
-    })
-  }
+    handleGoogleSignIn().then((res) => {
+      handleRespons(res, true);
+    });
+  };
 
   const fbSignIn = () => {
-    handleFbSignIn().then(res => {
-      setUser(res);
-      setLoggedInUser(res);
-      history.replace(from);
-    })
-  }
+    handleFbSignIn().then((res) => {
+      handleRespons(res, true);
+    });
+  };
 
   const signOut = () => {
-    handleSignOut().then(res => {
-      setUser(res);
-      setLoggedInUser(res);
-    })
-  }
-  
- 
+    handleSignOut().then((res) => {
+      handleRespons(res, false);
+    });
+  };
+
   const handleBlur = (e) => {
     let isFieldValid = true;
     if (e.target.name === "email") {
@@ -66,22 +74,28 @@ function Login() {
   };
   const handleSubmit = (e) => {
     if (newUser && user.email && user.password) {
-      
+      createUserWithEmailAndPassword(user.name, user.email, user.password).then(
+        (res) => {
+          handleRespons(res, true);
+        }
+      );
     }
     if (!newUser && user.email && user.password) {
-      
+      signInWithEmailAndPassword(user.email, user.password).then((res) => {
+        handleRespons(res, true);
+      });
     }
     e.preventDefault();
   };
 
-  
   return (
-    <div style={{textAlign: 'center'}}>
+    <div style={{ textAlign: "center" }}>
       {user.isSignedIn ? (
         <button onClick={signOut}>Sign Out</button>
       ) : (
         <button onClick={googleSignIn}>Sign In</button>
       )}
+      <br />
       <button onClick={fbSignIn}>Sign in Using Facebook</button>
       {user.isSignedIn && (
         <div>
@@ -90,6 +104,7 @@ function Login() {
           <img src={user.photo} alt=""></img>
         </div>
       )}
+
       <input
         type="checkbox"
         onChange={() => setNewUser(!newUser)}
@@ -124,7 +139,7 @@ function Login() {
           required
         ></input>
         <br />
-        <input type="submit" value={newUser ? 'Sign Up' : 'Sign In'} />
+        <input type="submit" value={newUser ? "Sign Up" : "Sign In"} />
       </form>
       <p>{user.error}</p>
       {user.success && (
